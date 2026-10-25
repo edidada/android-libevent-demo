@@ -9,13 +9,16 @@ ABI="${2:-arm64-v8a}"
 API="${3:-24}"
 PREFIX="${4:?install prefix required}"
 VER="2.1.12-stable"
+# Use the official release tarball (it ships a generated ./configure).
+# The auto-generated git tag archive does NOT contain configure.
+SRC="libevent-${VER}"
 
 WORK="$(mktemp -d)"
 echo "== building libevent ${VER} (NDK='${NDK:-host}') =="
 cd "$WORK"
-curl -fSL "https://github.com/libevent/libevent/archive/refs/tags/release-${VER}.tar.gz" -o le.tgz
+curl -fSL "https://github.com/libevent/libevent/releases/download/release-${VER}/${SRC}.tar.gz" -o le.tgz
 tar xzf le.tgz
-cd "libevent-release-${VER}"
+cd "${SRC}"
 
 if [ -n "${NDK}" ]; then
   # Android: cross-compile with the NDK clang wrapper. We disable thread
