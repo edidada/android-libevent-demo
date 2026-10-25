@@ -3,3 +3,10 @@ build-android/
 build-linux/
 ndk.zip
 android-ndk-r27c/
+.DS_Store
+._*
+.AppleDouble/
+.ci-vcpkg/
+out/
+vcpkg_installed/
+__pycache__/

@@ -1,0 +1,16 @@
+{
+  "name": "android-library-catalog",
+  "version-string": "1",
+  "builtin-baseline": "817892b0ecbc6af994dd6df999c73faf795adbf2",
+  "dependencies": [
+    "libevent", "libuv", "openssl", "sqlite3", "json-c", "jansson", "spdlog",
+    {"name": "poco", "default-features": false},
+    "boost-asio", "boost-filesystem", "boost-system", "boost-thread", "boost-regex",
+    {"name": "ffmpeg", "default-features": false, "features": ["avcodec", "avformat", "swresample", "swscale"]},
+    {"name": "opencv4", "default-features": false},
+    "libwebsockets",
+    "libogg", "libvorbis", "libpng", "libwebp", "openal-soft", "lua",
+    {"name": "curl", "default-features": false, "features": ["openssl"]},
+    {"name": "llama-cpp", "default-features": false}
+  ]
+}

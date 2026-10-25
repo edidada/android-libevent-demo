@@ -20,3 +20,141 @@ llama.cpp
 需要额外依赖的库（如 libwebsockets 想启用 SSL 需要 mbedtls/OpenSSL）：需要先编译依赖，再在配置 libwebsockets 时用 -DLWS_WITH_MBEDTLS=1 之类的选项指过去。
 
 非 CMake 构建的库：可能需要调整脚本，但 NDK 的 clang 工具链（如 aarch64-linux-android24-clang）是通用的，逻辑和你 build_libevent.sh 里做的事情类似。
+
+开源库	Android NDK	说明
+libevent		网络事件循环，通常可移植
+libuv		有 Android 支持
+OpenSSL		需要交叉编译
+SQLite		非常成熟
+json-c		依赖少
+Jansson		适合跨平台
+spdlog		C++ 日志库
+Poco		部分组件需要适配
+Boost		视具体模块而定
+FFmpeg		广泛用于 Android
+OpenCV		官方支持 Android
+tbox		支持 Android 构建
+
+除了 OpenCV，还有不少 C/C++ 开源库由官方明确支持 Android，包括网络通信、数据库、加密、音视频、图形和游戏开发库。
+
+需要区分三种支持程度：
+
+- 官方支持：项目维护者提供 Android 构建方案、NDK 配置或持续维护的 Android 平台代码。
+- 官方提供 Android SDK/AAR：可以直接集成到 Android 项目。
+- 可以移植：社区能编译成功，但官方不一定维护 Android 平台。
+
+对于你关注的 C/C++ 跨平台开发，优先选择前两种。
+
+## 一、官方明确提供 Android 支持的开源库
+
+以下是比较值得关注的项目，附上 GitHub 仓库或官方文档。
+
+| 库               | 语言    | 用途               | Android 官方支持情况                   |
+| --------------- | ----- | ---------------- | -------------------------------- |
+| POCO            | C++   | 网络、HTTP、数据库、JSON | 官方 Android 移植文档                  |
+| libcurl         | C     | HTTP、HTTPS、FTP   | 官方 NDK 编译指南                      |
+| SQLite          | C     | 嵌入式数据库           | 官方 Android AAR                   |
+| SDL3            | C     | 图形、音频、输入         | 官方 Android 项目和构建文档               |
+| TBOX            | C     | 容器、协程、网络、算法      | 官方声明支持 Android                   |
+| FFmpeg          | C     | 音视频编解码           | 支持 Android 交叉编译                  |
+| OpenSSL         | C     | TLS、加密           | 支持 Android 构建                    |
+| mbed TLS        | C     | TLS、密码学          | 支持 Android NDK 构建                |
+| Google protobuf | C++   | 数据序列化            | 支持 Android                       |
+| gRPC            | C++   | RPC 网络通信         | 有 Android 支持，需区分 C++ 和 Java 集成方式 |
+| ONNX Runtime    | C/C++ | AI 模型推理          | 官方 Android 包                     |
+| TensorFlow Lite | C/C++ | 移动端 AI 推理        | 官方 Android 支持                    |
+
+其中 POCO、libcurl、SQLite、SDL3、TBOX 的 Android 支持可以直接从项目官方资料确认。
+
+[image](https://www.google.com/s2/favicons?domain=https://docs.pocoproject.org\&sz=32)
+
+docs.pocoproject.org
+
++4
+
+
+
+## 二、值得重点看的 6 个项目
+
+[pocoproject (POCO C++ Libraries) | Keybase](https://images.openai.com/static-rsc-4/rZjZ2R4JM_h36nYtSVsomZ6R3hoPPwMRSHVlfpHRwkZHT8zr0X8ktH5zkB3_2_q4-ah58o_30kV2xXfnmP1y-bWv6-T_4BrJKgBMWqaIHwJT67apr7vlp7XQJ8R7noYCpVPY04mT9MrW-xeE2iajmipOOSoutL2lNcvqvjQlWy8?purpose=inline)
+
+1\. POCO C++ Libraries
+
+HTTP 服务端/客户端、WebSocket、数据库、JSON、线程等。官方 Android 文档明确列出了部分受限模块。
+
+[Android 官方文档](https://docs.pocoproject.org/current/99300-AndroidPlatformNotes.html?utm_source=chatgpt.com)
+
+[CURL Logo PNG Vector (SVG) Free Download](https://images.openai.com/static-rsc-4/-zCFFP4Pdm9EUy1tbTWESj95YuJ0bIYbYrHxSKY1A3Edpc81zGKyqeCuid4fQyRLRiXFWDeQndw6rViSbVzezUYrUZT8PTefVBtPj5QwzdNw6UafCAC2RBVptQoh9672ao_pGT-PB02iXjxpwrsGHsZ3ZFtiqc9ZqP6UbH43ZTg?purpose=inline)
+
+2\. libcurl
+
+适合 C 语言 HTTP/HTTPS 客户端，官方文档给出了 Android NDK + CMake 编译示例。
+
+[官方编译指南](https://curl.se/docs/install.html?utm_source=chatgpt.com)
+
+[Free Download SQLite Logo in Vector Formats](https://images.openai.com/static-rsc-4/4xTVn01t1WPxD08-pKJLia1IP4Eg27txL8vqYML4j7hKw2D3oT7c_-pyHXrtJPFliXkMD5H44EGTY8hwILOMR7btgsWrcwdGnmNQUuhlfNLAs4_ujaKWtnUJKdymevunuvjz7kto60B5tNh8kr9s34pMZsPEAlwZ43A_ChinDr4?purpose=inline)
+
+3\. SQLite
+
+纯 C 数据库引擎，适合 Android 本地数据存储。官方提供预编译 Android AAR。
+
+[官方下载](https://www.sqlite.org/download.html?utm_source=chatgpt.com)
+
+4\. SDL3
+
+跨平台图形、窗口、音频、触摸和输入处理，官方提供 Android Gradle 项目。
+
+[Android 开发文档](https://wiki.libsdl.org/SDL3/README-android?utm_source=chatgpt.com)
+
+[GitHub - cpp-main/cpp-tbox: A complete Linux application software development tool library and runtime framework, aim at make C++ development easy.](https://images.openai.com/static-rsc-4/LRVTDo356zP11xSoXNWvyTs2Y8nhbbtAmb9atx7L7OeCR8_JnBwzYm2qZa_yUsjE-SYUjHwraQyuJxzbBv3ltSmx7JiWFbZH6Vd0ZoyfhSbk84a_5hovpjjbE13bUenZ9yMCZ-HChrRkYuCNBTSwzy6c77ayn9O5sUaz3jxvBUI?purpose=inline)
+
+5\. TBOX
+
+纯 C 跨平台基础库，提供容器、算法、网络、协程等模块。项目官方列出 Android 平台。
+
+[GitHub 仓库](https://github.com/tboox/tbox?utm_source=chatgpt.com)
+
+[FREE AI-Powered C Code Generator | Accelerate Your C Programming](https://images.openai.com/static-rsc-4/ZWcAl8WbXvrDUEm604etiEeMzMlpyqfK6hZbqMBTb0GWaXKXiIrVhUXpOlOy1thErzEns8mZZd9YnjLfIhTdtIoj79nt0NBY13yLg5hYSerp-uLVHo0FyBJ1gYxKAm_k69w4rhCCTxq_zfyCCHTVUa6QIfia4oKr1b9mxFwMyOU?purpose=inline)
+
+6\. libuv
+
+异步 I/O、事件循环、线程池、TCP/UDP。需要注意：Android 被列为 Tier 3（社区维护），不是最高等级的官方支持。
+
+[官方平台支持分级](https://github.com/libuv/libuv/blob/v1.x/SUPPORTED_PLATFORMS.md?utm_source=chatgpt.com)
+
+## 三、如果重点是 Windows + Linux + Android 三平台
+
+针对 C/C++ 网络和后端开发，我建议优先研究：
+
+| 需求       | 推荐库                          |
+| -------- | ---------------------------- |
+| HTTP 客户端 | libcurl                      |
+| HTTP 服务端 | POCO Net、libevent            |
+| 异步网络     | libuv、libevent               |
+| JSON     | nlohmann/json（C++）、json-c（C） |
+| 数据库      | SQLite                       |
+| 日志       | spdlog                       |
+| 容器/基础设施  | TBOX、Boost                   |
+| TLS 加密   | OpenSSL、mbed TLS             |
+| 音视频      | FFmpeg                       |
+| 图形/游戏    | SDL3、OpenCV                  |
+
+注意，这张表是跨平台技术选型建议，并不表示每个库都提供同等级的官方 Android SDK。
+
+另外，libevent 虽然有 Android 移植实践，但不能仅凭 Linux 支持就认定其所有功能都经过 Android 官方持续测试。
+
+## 四、Android 编译工具怎么选？
+
+- CMake + Android NDK：最适合已经使用 CMake 的项目。
+
+- xmake：适合 TBOX 及多平台交叉编译，xmake 官方明确列出 Android 支持。
+
+  [image](https://www.google.com/s2/favicons?domain=https://github.com\&sz=32)
+
+  GitHub
+
+  +1
+
+- Conan 2：适合管理大型 C/C++ 依赖树，但必须确认具体包的 Android 兼容性。
+
+结论： 如果你希望同一套 C/C++ 核心代码运行在 Windows、Linux、Android，我会优先考虑 POCO、libcurl、SQLite、TBOX、OpenSSL。这些库的 Android 支持依据相对明确，比较适合构建可长期维护的跨平台项目。
