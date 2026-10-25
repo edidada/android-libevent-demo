@@ -55,7 +55,8 @@ jobs:
           ref: 817892b0ecbc6af994dd6df999c73faf795adbf2
           path: .ci-vcpkg
           fetch-depth: 0
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: cache
         with:
           path: out/cache
           key: android-${{ matrix.os }}-${{ matrix.ndk }}-${{ matrix.abi }}-${{ hashFiles('ci/**') }}
@@ -67,13 +68,13 @@ jobs:
           else
             bash .ci-vcpkg/bootstrap-vcpkg.sh -disableMetrics
           fi
+      - name: Build libkev Gear-Lib Box2D tbox and TensorFlow Lite
+        run: python ci/build_extra.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}"
       - name: Build catalog and dependencies for Android
+        if: ${{ !cancelled() }}
         run: |
           mkdir -p out
-          .ci-vcpkg/vcpkg install --triplet=${{ matrix.triplet }} --overlay-triplets="$PWD/ci/triplets" --x-manifest-root="$PWD/ci" --x-install-root="$PWD/out/installed" --keep-going 2>&1 | tee out/vcpkg.log
-      - name: Build libkev Gear-Lib Box2D and tbox
-        if: ${{ !cancelled() }}
-        run: python ci/build_extra.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}"
+          .ci-vcpkg/vcpkg install --triplet=${{ matrix.triplet }} --overlay-triplets="$PWD/ci/triplets" --x-manifest-root="$PWD/ci" --x-install-root="$PWD/out/installed" --keep-going --clean-after-build 2>&1 | tee out/vcpkg.log
       - name: Build libevent Android demo against installed library
         if: ${{ !cancelled() }}
         run: |
@@ -99,3 +100,8 @@ jobs:
             .ci-vcpkg/buildtrees/**/*.log
           retention-days: 7
           include-hidden-files: true
+      - uses: actions/cache/save@v4
+        if: ${{ !cancelled() && steps.cache.outputs.cache-hit != 'true' }}
+        with:
+          path: out/cache
+          key: android-${{ matrix.os }}-${{ matrix.ndk }}-${{ matrix.abi }}-${{ hashFiles('ci/**') }}
