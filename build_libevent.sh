@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cross-compile (or native-build) libevent for Android/Linux using CMake.
+# Build libevent for Android (autotools cross-compile) or host (CMake).
 # Usage: build_libevent.sh <NDK_PATH|""> <ABI> <API_LEVEL> <INSTALL_PREFIX>
 #   - pass an empty NDK_PATH ("") to do a native host build (Linux smoke test)
 set -euo pipefail
@@ -17,17 +17,31 @@ curl -fSL "https://github.com/libevent/libevent/archive/refs/tags/release-${VER}
 tar xzf le.tgz
 cd "libevent-release-${VER}"
 
-mkdir -p build && cd build
-
-# On Android, pthread is integrated into libc (no -lpthread lib), so force
-# FindThreads to detect it via the -pthread flag instead of -lpthread.
 if [ -n "${NDK}" ]; then
-  cmake -DCMAKE_TOOLCHAIN_FILE="${NDK}/build/cmake/android.toolchain.cmake"         -DANDROID_ABI="${ABI}" -DANDROID_PLATFORM="android-${API}"         -DTHREADS_PREFER_PTHREAD_FLAG=ON -DCMAKE_THREAD_PREFER_PTHREAD=ON         -DCMAKE_INSTALL_PREFIX="${PREFIX}"         -DEVENT__DISABLE_OPENSSL=ON -DEVENT__DISABLE_BENCHMARK=ON         -DEVENT__DISABLE_TESTS=ON -DEVENT__DISABLE_SAMPLES=ON         -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
+  # Android: cross-compile with the NDK clang wrapper. We disable thread
+  # support because our demo only uses timers (no pthread needed), which
+  # avoids libevent's CMake find_package(Threads) failing on Android NDK.
+  TC="${NDK}/toolchains/llvm/prebuilt/linux-x86_64"
+  export CC="${TC}/bin/aarch64-linux-android${API}-clang"
+  export CXX="${TC}/bin/aarch64-linux-android${API}-clang++"
+  export AR="${TC}/bin/llvm-ar"
+  export RANLIB="${TC}/bin/llvm-ranlib"
+  export STRIP="${TC}/bin/llvm-strip"
+  ./configure --host=aarch64-linux-android \
+    --prefix="${PREFIX}" --enable-static --disable-shared \
+    --disable-openssl --disable-samples --disable-libevent-regress \
+    --disable-thread-support
+  make -j"$(nproc)"
+  make install
 else
-  cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}"         -DEVENT__DISABLE_OPENSSL=ON -DEVENT__DISABLE_BENCHMARK=ON         -DEVENT__DISABLE_TESTS=ON -DEVENT__DISABLE_SAMPLES=ON         -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
+  mkdir -p build && cd build
+  cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
+    -DEVENT__DISABLE_OPENSSL=ON -DEVENT__DISABLE_BENCHMARK=ON \
+    -DEVENT__DISABLE_TESTS=ON -DEVENT__DISABLE_SAMPLES=ON \
+    -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
+  cmake --build . -j"$(nproc)"
+  cmake --install .
 fi
 
-cmake --build . -j"$(nproc)"
-cmake --install .
 echo "== libevent installed to ${PREFIX} =="
 ls -R "${PREFIX}" | head -40

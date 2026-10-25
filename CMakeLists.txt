@@ -10,9 +10,23 @@ endif()
 
 find_library(LOG_LIB log)
 
+# autotools splits libevent into libevent / libevent_core / libevent_extra;
+# the CMake build produces a single libevent. Accept whatever was produced.
+set(_le_names event libevent libevent_core libevent_extra)
+foreach(_n ${_le_names})
+  find_library(_LE_${_n} NAMES ${_n}
+    PATHS ${LIBEVENT_ROOT}/lib ${LIBEVENT_ROOT}/lib64 NO_DEFAULT_PATH)
+  if(_LE_${_n})
+    list(APPEND LIBEVENT_LIBS ${_LE_${_n}})
+  endif()
+endforeach()
+if(NOT LIBEVENT_LIBS)
+  list(APPEND LIBEVENT_LIBS ${LIBEVENT_ROOT}/lib/libevent.a)
+endif()
+
 add_executable(libevent_demo src/main.cpp)
 target_include_directories(libevent_demo PRIVATE ${LIBEVENT_ROOT}/include)
-target_link_libraries(libevent_demo ${LIBEVENT_ROOT}/lib/libevent.a)
+target_link_libraries(libevent_demo ${LIBEVENT_LIBS})
 
 if(ANDROID)
   # Android: libevent may reference dlopen; bionic integrates pthread into libc

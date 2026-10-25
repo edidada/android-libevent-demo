@@ -1,0 +1,22 @@
+网络与通信类
+这类库和 libevent 场景最接近，通常用来处理 HTTP、WebSocket 或事件循环。
+
+libwebsockets
+这是一个纯 C 的轻量级库，支持 HTTP/1、HTTP/2、WebSocket、MQTT 等协议。有现成的 Android NDK 构建示例，使用 CMake 配合脚本即可自动化编译出静态库，并且已经在 NDK r25 和 r27 上测试过。如果你的需求是替换或补充 libevent 的 HTTP/WebSocket 功能，这个库很合适。
+
+libkev
+一个 C++14 的事件循环库，明确支持 epoll（Linux/Android）、iocp、kqueue 等，官方声明支持 Android 平台，构建系统也是 CMake。如果你的项目是 C++ 且需要一个现代的事件循环抽象，可以考虑。
+
+Gear-Lib
+这是一组通用的 C 基础库，目标就是跨平台兼容 Linux、Windows、Android、iOS。里面包含了不少网络和异步相关的组件，比如 libsock（Socket 封装）、libmqttc（MQTT 客户端）、libgevent（事件驱动）等。适合需要一套基础组件（数据结构、网络、异步）的情况。
+
+图形、多媒体与通用工具类
+nCine-android-libraries
+这个仓库专门提供了用 CMake 脚本交叉编译 nCine 引擎所需依赖库的方法。里面包含了一批你可能用得到的通用库：libogg、libvorbis（音频）、libpng、libwebp（图像）、OpenAL-soft（音频）、Lua（脚本）、Box2D（物理）、libcurl（网络传输）。如果你的 App 涉及游戏、媒体处理或需要脚本引擎，可以参考它的脚本直接编译这些库。
+
+llama.cpp
+如果你对端侧 AI 有兴趣，llama.cpp 是可以在 Android 上交叉编译的。有指南显示，使用 NDK 的 CMake 工具链文件，配合 -DGGML_OPENMP=OFF 等选项，可以成功为 arm64-v8a 编译出可执行文件。这需要 root 权限来运行，但证明了 C/C++ AI 推理库在 Android 上的可行性。
+
+需要额外依赖的库（如 libwebsockets 想启用 SSL 需要 mbedtls/OpenSSL）：需要先编译依赖，再在配置 libwebsockets 时用 -DLWS_WITH_MBEDTLS=1 之类的选项指过去。
+
+非 CMake 构建的库：可能需要调整脚本，但 NDK 的 clang 工具链（如 aarch64-linux-android24-clang）是通用的，逻辑和你 build_libevent.sh 里做的事情类似。
