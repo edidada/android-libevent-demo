@@ -39,10 +39,10 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools
+          packages: ndk;${{ matrix.ndk }}
+          log-accepted-android-sdk-licenses: false
       - name: Install selected NDK
         run: |
-          sdkmanager "ndk;${{ matrix.ndk }}"
           python -c "import os; from pathlib import Path; p=Path(os.environ['ANDROID_HOME'])/'ndk'/'${{ matrix.ndk }}'; open(os.environ['GITHUB_ENV'],'a').write('ANDROID_NDK_HOME='+p.as_posix()+'\n')"
       - uses: xmake-io/github-action-setup-xmake@v1
         with:
@@ -76,6 +76,9 @@ jobs:
         run: |
           cmake -S . -B out/demo -G Ninja -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-24 -DLIBEVENT_ROOT="$PWD/out/installed/${{ matrix.triplet }}"
           cmake --build out/demo --parallel 3
+      - name: Verify Android archive architecture
+        if: ${{ !cancelled() }}
+        run: python ci/verify_artifacts.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}" --triplet "${{ matrix.triplet }}"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
@@ -89,5 +92,7 @@ jobs:
             out/extra/results.json
             out/demo/libevent_demo*
             out/vcpkg.log
+            out/artifact-verification.json
             .ci-vcpkg/buildtrees/**/*.log
           retention-days: 7
+          include-hidden-files: true

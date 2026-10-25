@@ -24,6 +24,8 @@ cmake --build build-android
 
 ## CI
 
+新增的 [Android 库清单构建](ci/README.md)（`.github/workflows/libraries.yml`）读取 `library.txt` 的库范围，覆盖 Linux/macOS/Windows 各两个宿主版本、NDK r27/r28 和四种 Android ABI。库功能范围、复现命令、产物说明见该文档。实际成功范围以对应提交的 Actions 结果为准。
+
 GitHub Actions（`.github/workflows/build.yml`）做两件事：
 
 1. **android** job：下载 NDK r27c → 用 libevent 的 `configure` 交叉编译 libevent（arm64-v8a）→ 用 NDK toolchain 编译 demo，产出 `ELF 64-bit ARM aarch64` 可执行文件（链接 /system/bin/linker64），并上传为 artifact。
