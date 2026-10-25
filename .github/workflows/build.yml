@@ -1,0 +1,51 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install NDK r27c
+        run: |
+          curl -fSL https://dl.google.com/android/repository/android-ndk-r27c-linux.zip -o ndk.zip
+          unzip -q ndk.zip
+          echo "NDK=$PWD/android-ndk-r27c" >> "$GITHUB_ENV"
+
+      - name: Build libevent (Android, arm64-v8a)
+        run: bash build_libevent.sh "$NDK" arm64-v8a 24 "$PWD/prebuilt"
+
+      - name: Build demo (Android)
+        run: |
+          cmake -S . -B build-android -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DLIBEVENT_ROOT="$PWD/prebuilt"
+          cmake --build build-android -j"$(nproc)"
+
+      - name: Inspect binary
+        run: file build-android/libevent_demo && ${NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objdump -h build-android/libevent_demo | head -20
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libevent_demo-android
+          path: build-android/libevent_demo
+
+  linux-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libevent-dev (apt)
+        run: sudo apt-get update && sudo apt-get install -y libevent-dev
+
+      - name: Build demo (Linux native)
+        run: |
+          cmake -S . -B build-linux -DLIBEVENT_ROOT=/usr
+          cmake --build build-linux -j"$(nproc)"
+
+      - name: Run demo (proves the libevent logic works)
+        run: ./build-linux/libevent_demo

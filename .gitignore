@@ -1,0 +1,5 @@
+prebuilt/
+build-android/
+build-linux/
+ndk.zip
+android-ndk-r27c/
