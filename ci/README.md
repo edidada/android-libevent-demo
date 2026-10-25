@@ -23,7 +23,7 @@
 - Ubuntu 22.04 / 24.04、macOS 14 / 15、Windows Server 2022 / 2025。
 - 每个宿主版本分别构建 NDK r27c (`27.2.12479018`) 和 r28c (`28.2.13676358`)，arm64-v8a、API 24。
 - Ubuntu 24.04 + r28c 额外构建 armeabi-v7a、x86、x86_64，API 24。
-- 共 15 个任务；关闭 fail-fast，一个平台失败不会取消其他平台。
+- 共 15 种宿主/NDK/ABI 组合，每种分 catalog（vcpkg）和 extra（独立源码）两个任务，共 30 个任务；关闭 fail-fast，一个库组失败不会取消其他组。
 
 `libraries.yml` 在 push 到 edidada/android-libevent-demo 的 main 分支后执行，支持手动触发。保留原有 libevent 演示和 Linux 原生运行测试。
 

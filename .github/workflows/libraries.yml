@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   libraries:
-    name: ${{ matrix.os }} / NDK ${{ matrix.ndk }} / ${{ matrix.abi }}
+    name: ${{ matrix.kind }} / ${{ matrix.os }} / NDK ${{ matrix.ndk }} / ${{ matrix.abi }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 180
     strategy:
@@ -17,10 +17,14 @@ jobs:
         ndk: [27.2.12479018, 28.2.13676358]
         abi: [arm64-v8a]
         triplet: [arm64-android]
+        kind: [catalog, extra]
         include:
-          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: armeabi-v7a, triplet: arm-neon-android}
-          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: x86, triplet: x86-android}
-          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: x86_64, triplet: x64-android}
+          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: armeabi-v7a, triplet: arm-neon-android, kind: catalog}
+          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: x86, triplet: x86-android, kind: catalog}
+          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: x86_64, triplet: x64-android, kind: catalog}
+          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: armeabi-v7a, triplet: arm-neon-android, kind: extra}
+          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: x86, triplet: x86-android, kind: extra}
+          - {os: ubuntu-24.04, ndk: 28.2.13676358, abi: x86_64, triplet: x64-android, kind: extra}
     env:
       VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/out/cache,readwrite
       VCPKG_MAX_CONCURRENCY: 3
@@ -45,11 +49,13 @@ jobs:
         run: |
           python -c "import os; from pathlib import Path; p=Path(os.environ['ANDROID_HOME'])/'ndk'/'${{ matrix.ndk }}'; open(os.environ['GITHUB_ENV'],'a').write('ANDROID_NDK_HOME='+p.as_posix()+'\n')"
       - uses: xmake-io/github-action-setup-xmake@v1
+        if: matrix.kind == 'extra'
         with:
           xmake-version: '3.0.5'
       - uses: ilammy/msvc-dev-cmd@v1
         if: runner.os == 'Windows'
       - uses: actions/checkout@v4
+        if: matrix.kind == 'catalog'
         with:
           repository: microsoft/vcpkg
           ref: 817892b0ecbc6af994dd6df999c73faf795adbf2
@@ -57,11 +63,13 @@ jobs:
           fetch-depth: 0
       - uses: actions/cache/restore@v4
         id: cache
+        if: matrix.kind == 'catalog'
         with:
           path: out/cache
           key: android-${{ matrix.os }}-${{ matrix.ndk }}-${{ matrix.abi }}-${{ hashFiles('ci/**') }}
           restore-keys: android-${{ matrix.os }}-${{ matrix.ndk }}-${{ matrix.abi }}-
       - name: Bootstrap vcpkg
+        if: matrix.kind == 'catalog'
         run: |
           if [ "$RUNNER_OS" = Windows ]; then
             MSYS_NO_PATHCONV=1 cmd.exe /c '.ci-vcpkg\bootstrap-vcpkg.bat -disableMetrics'
@@ -69,24 +77,27 @@ jobs:
             bash .ci-vcpkg/bootstrap-vcpkg.sh -disableMetrics
           fi
       - name: Build libkev Gear-Lib Box2D tbox and TensorFlow Lite
-        run: python ci/build_extra.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}"
+        if: matrix.kind == 'extra'
+        run: |
+          mkdir -p out
+          python ci/build_extra.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}" 2>&1 | tee out/extra.log
       - name: Build catalog and dependencies for Android
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.kind == 'catalog' }}
         run: |
           mkdir -p out
           .ci-vcpkg/vcpkg install --triplet=${{ matrix.triplet }} --overlay-triplets="$PWD/ci/triplets" --x-manifest-root="$PWD/ci" --x-install-root="$PWD/out/installed" --keep-going --clean-after-build 2>&1 | tee out/vcpkg.log
       - name: Build libevent Android demo against installed library
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.kind == 'catalog' }}
         run: |
           cmake -S . -B out/demo -G Ninja -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-24 -DLIBEVENT_ROOT="$PWD/out/installed/${{ matrix.triplet }}"
           cmake --build out/demo --parallel 3
       - name: Verify Android archive architecture
         if: ${{ !cancelled() }}
-        run: python ci/verify_artifacts.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}" --triplet "${{ matrix.triplet }}"
+        run: python ci/verify_artifacts.py --ndk "$ANDROID_NDK_HOME" --abi "${{ matrix.abi }}" --triplet "${{ matrix.triplet }}" --kind "${{ matrix.kind }}"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: android-${{ matrix.os }}-ndk${{ matrix.ndk }}-${{ matrix.abi }}
+          name: android-${{ matrix.kind }}-${{ matrix.os }}-ndk${{ matrix.ndk }}-${{ matrix.abi }}
           path: |
             out/installed/${{ matrix.triplet }}/include
             out/installed/${{ matrix.triplet }}/lib
@@ -96,12 +107,13 @@ jobs:
             out/extra/results.json
             out/demo/libevent_demo*
             out/vcpkg.log
+            out/extra.log
             out/artifact-verification.json
             .ci-vcpkg/buildtrees/**/*.log
           retention-days: 7
           include-hidden-files: true
       - uses: actions/cache/save@v4
-        if: ${{ !cancelled() && steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && matrix.kind == 'catalog' && steps.cache.outputs.cache-hit != 'true' }}
         with:
           path: out/cache
           key: android-${{ matrix.os }}-${{ matrix.ndk }}-${{ matrix.abi }}-${{ hashFiles('ci/**') }}
