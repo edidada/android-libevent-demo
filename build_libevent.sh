@@ -19,8 +19,10 @@ cd "libevent-release-${VER}"
 
 mkdir -p build && cd build
 
+# On Android, pthread is integrated into libc (no -lpthread lib), so force
+# FindThreads to detect it via the -pthread flag instead of -lpthread.
 if [ -n "${NDK}" ]; then
-  cmake -DCMAKE_TOOLCHAIN_FILE="${NDK}/build/cmake/android.toolchain.cmake"         -DANDROID_ABI="${ABI}" -DANDROID_PLATFORM="android-${API}"         -DCMAKE_INSTALL_PREFIX="${PREFIX}"         -DEVENT__DISABLE_OPENSSL=ON -DEVENT__DISABLE_BENCHMARK=ON         -DEVENT__DISABLE_TESTS=ON -DEVENT__DISABLE_SAMPLES=ON         -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
+  cmake -DCMAKE_TOOLCHAIN_FILE="${NDK}/build/cmake/android.toolchain.cmake"         -DANDROID_ABI="${ABI}" -DANDROID_PLATFORM="android-${API}"         -DTHREADS_PREFER_PTHREAD_FLAG=ON -DCMAKE_THREAD_PREFER_PTHREAD=ON         -DCMAKE_INSTALL_PREFIX="${PREFIX}"         -DEVENT__DISABLE_OPENSSL=ON -DEVENT__DISABLE_BENCHMARK=ON         -DEVENT__DISABLE_TESTS=ON -DEVENT__DISABLE_SAMPLES=ON         -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
 else
   cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}"         -DEVENT__DISABLE_OPENSSL=ON -DEVENT__DISABLE_BENCHMARK=ON         -DEVENT__DISABLE_TESTS=ON -DEVENT__DISABLE_SAMPLES=ON         -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release ..
 fi
