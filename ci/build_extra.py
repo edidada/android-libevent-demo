@@ -41,7 +41,7 @@ def main():
                 arch = {'arm64-v8a': 'arm64-v8a', 'armeabi-v7a': 'armeabi-v7a',
                         'x86': 'x86', 'x86_64': 'x86_64'}[args.abi]
                 run('xmake', 'f', '-y', '-p', 'android', '-a', arch, '-m', 'release',
-                    '--ndk=' + args.ndk, '--ndk_sdkver=24', '--demo=n', cwd=src)
+                    '--ndk=' + args.ndk, '--ndk_sdkver=24', cwd=src)
                 run('xmake', '-y', '-j', '3', 'tbox', cwd=src)
                 run('xmake', 'install', '-o', prefix, 'tbox', cwd=src)
             else:
@@ -74,6 +74,15 @@ def main():
                               'install(DIRECTORY gear-lib/ DESTINATION include FILES_MATCHING PATTERN "*.h")']
                     (src / 'CMakeLists.txt').write_text('\n'.join(cmake), encoding='utf-8')
                 build = root / (name + '-build')
+                extra_args = []
+                if name == 'tensorflow-lite':
+                    native = root / 'flatc-host-build'
+                    native_prefix = root / 'flatc-host'
+                    run('cmake', '-S', src / 'tensorflow/lite/tools/cmake/native_tools/flatbuffers',
+                        '-B', native, '-G', 'Ninja', '-DCMAKE_BUILD_TYPE=Release',
+                        '-DCMAKE_INSTALL_PREFIX=' + native_prefix.as_posix())
+                    run('cmake', '--build', native, '--target', 'flatbuffers-flatc', '--parallel', '3')
+                    extra_args = ['-DTFLITE_HOST_TOOLS_DIR=' + (native_prefix / 'bin').as_posix()]
                 cmake_src = src / 'tensorflow/lite' if name == 'tensorflow-lite' else src
                 run('cmake', '-S', cmake_src, '-B', build, '-G', 'Ninja',
                     '-DCMAKE_TOOLCHAIN_FILE=' + args.ndk + '/build/cmake/android.toolchain.cmake',
@@ -82,7 +91,7 @@ def main():
                     '-DBUILD_SHARED_LIBS=OFF', '-DBOX2D_BUILD_UNIT_TESTS=OFF',
                     '-DBOX2D_BUILD_TESTBED=OFF', '-DTFLITE_ENABLE_XNNPACK=OFF',
                     '-DTFLITE_ENABLE_GPU=OFF', '-DTFLITE_ENABLE_INSTALL=ON',
-                    '-DCMAKE_INSTALL_PREFIX=' + str(prefix))
+                    '-DCMAKE_INSTALL_PREFIX=' + prefix.as_posix(), *extra_args)
                 run('cmake', '--build', build, '--parallel', '3')
                 if name == 'libkev':
                     (prefix / 'lib').mkdir(parents=True, exist_ok=True)

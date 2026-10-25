@@ -46,12 +46,15 @@ jobs:
           python -c "import os; from pathlib import Path; p=Path(os.environ['ANDROID_HOME'])/'ndk'/'${{ matrix.ndk }}'; open(os.environ['GITHUB_ENV'],'a').write('ANDROID_NDK_HOME='+p.as_posix()+'\n')"
       - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: '2.9.9'
+          xmake-version: '3.0.5'
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
       - uses: actions/checkout@v4
         with:
           repository: microsoft/vcpkg
           ref: 817892b0ecbc6af994dd6df999c73faf795adbf2
           path: .ci-vcpkg
+          fetch-depth: 0
       - uses: actions/cache@v4
         with:
           path: out/cache

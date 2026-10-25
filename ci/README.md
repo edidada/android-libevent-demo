@@ -42,4 +42,4 @@ gh run view RUN_ID --repo edidada/android-libevent-demo --log-failed
 gh run download RUN_ID --repo edidada/android-libevent-demo
 ```
 
-额外构建需安装 CMake、Ninja、Git、Python 3 和 xmake 2.9.9。标准库由 vcpkg 处理交叉编译依赖。纯 C/C++ NDK 工程不引入 Maven/Gradle Java 包装工程；CI SDK 工具使用 JDK 17。
+额外构建需安装 CMake、Ninja、Git、Python 3 和 xmake 3.0.5。TensorFlow Lite 先用宿主编译器构建 flatc，再交叉编译目标库；Windows 预先初始化 MSVC。标准库由 vcpkg 处理交叉编译依赖，vcpkg 需要完整 Git 历史以解析依赖版本。纯 C/C++ NDK 工程不引入 Maven/Gradle Java 包装工程；CI SDK 工具使用 JDK 17。
