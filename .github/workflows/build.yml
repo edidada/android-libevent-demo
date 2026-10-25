@@ -39,12 +39,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install libevent-dev (apt)
-        run: sudo apt-get update && sudo apt-get install -y libevent-dev
+      - name: Build libevent (host, from source)
+        run: bash build_libevent.sh "" "" "" "$PWD/prebuilt-linux"
 
       - name: Build demo (Linux native)
         run: |
-          cmake -S . -B build-linux -DLIBEVENT_ROOT=/usr
+          cmake -S . -B build-linux -DLIBEVENT_ROOT="$PWD/prebuilt-linux"
           cmake --build build-linux -j"$(nproc)"
 
       - name: Run demo (proves the libevent logic works)
