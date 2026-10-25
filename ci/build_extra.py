@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import re
 import subprocess
 import sys
 
@@ -26,6 +27,7 @@ def main():
         'gear-lib': ('gozfree/gear-lib', 'bffbfd25af4ff7b04ebfafdab391b55270b0273e'),
         'box2d': ('erincatto/box2d', 'v2.4.1'),
         'tbox': ('tboox/tbox', 'c8fb971e2bf43c3402aa32e1a8ae70de11163f63'),
+        'tensorflow-lite': ('tensorflow/tensorflow', 'v2.18.0'),
     }
     for name, (repo, ref) in sources.items():
         try:
@@ -47,6 +49,19 @@ def main():
                     cm = src / 'CMakeLists.txt'
                     cm.write_text(cm.read_text().replace('-Werror', ''), encoding='utf-8')
                 if name == 'gear-lib':
+                    log = src / 'gear-lib/liblog/liblog.c'
+                    log.write_text(re.sub(r'\bgettid\b', 'gear_gettid', log.read_text()), encoding='utf-8')
+                    thread = src / 'gear-lib/libthread/libthread.c'
+                    text = thread.read_text()
+                    # Bionic does not expose inheritance attributes. Thread names are
+                    # already saved by thread_set_name; getname_np requires API 26.
+                    text = text.replace('    if (0 == pthread_attr_getinheritsched',
+                                        '#ifndef __ANDROID__\n    if (0 == pthread_attr_getinheritsched')
+                    text = text.replace('    if (0 == pthread_attr_getschedpolicy',
+                                        '#endif\n    if (0 == pthread_attr_getschedpolicy')
+                    text = text.replace('if (0 == pthread_getname_np(t->tid, t->name, sizeof(t->name)))',
+                                        "if (t->name[0] != '\\0')")
+                    thread.write_text(text, encoding='utf-8')
                     # Portable networking subset. Exclude Windows poller and optional AV dependencies.
                     modules = ['libposix', 'libdarray', 'libthread', 'liblog', 'libgevent', 'libsock']
                     cmake = ['cmake_minimum_required(VERSION 3.16)', 'project(gear C)',
@@ -59,12 +74,15 @@ def main():
                               'install(DIRECTORY gear-lib/ DESTINATION include FILES_MATCHING PATTERN "*.h")']
                     (src / 'CMakeLists.txt').write_text('\n'.join(cmake), encoding='utf-8')
                 build = root / (name + '-build')
-                run('cmake', '-S', src, '-B', build, '-G', 'Ninja',
+                cmake_src = src / 'tensorflow/lite' if name == 'tensorflow-lite' else src
+                run('cmake', '-S', cmake_src, '-B', build, '-G', 'Ninja',
                     '-DCMAKE_TOOLCHAIN_FILE=' + args.ndk + '/build/cmake/android.toolchain.cmake',
                     '-DANDROID_ABI=' + args.abi, '-DANDROID_PLATFORM=android-24',
                     '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5',
                     '-DBUILD_SHARED_LIBS=OFF', '-DBOX2D_BUILD_UNIT_TESTS=OFF',
-                    '-DBOX2D_BUILD_TESTBED=OFF', '-DCMAKE_INSTALL_PREFIX=' + str(prefix))
+                    '-DBOX2D_BUILD_TESTBED=OFF', '-DTFLITE_ENABLE_XNNPACK=OFF',
+                    '-DTFLITE_ENABLE_GPU=OFF', '-DTFLITE_ENABLE_INSTALL=ON',
+                    '-DCMAKE_INSTALL_PREFIX=' + str(prefix))
                 run('cmake', '--build', build, '--parallel', '3')
                 if name == 'libkev':
                     (prefix / 'lib').mkdir(parents=True, exist_ok=True)

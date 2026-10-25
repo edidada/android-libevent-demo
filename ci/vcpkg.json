@@ -11,6 +11,9 @@
     "libwebsockets",
     "libogg", "libvorbis", "libpng", "libwebp", "openal-soft", "lua",
     {"name": "curl", "default-features": false, "features": ["openssl"]},
-    {"name": "llama-cpp", "default-features": false}
+    {"name": "llama-cpp", "default-features": false},
+    {"name": "sdl3", "default-features": false},
+    "mbedtls", "protobuf", "grpc", "nlohmann-json",
+    {"name": "onnxruntime", "default-features": false}
   ]
 }
